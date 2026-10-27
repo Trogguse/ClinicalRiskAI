@@ -4,17 +4,22 @@
 
 A production-ready Flask application that uses ensemble machine learning (Gradient Boosting + Random Forest) to stratify patient risk into Low / Medium / High categories based on 21 clinical features.
 
+[![Render](https://img.shields.io/badge/Render-Live%20Application-46E3B7?logo=render&logoColor=white)](https://clinical-risk-ai-rkgg.onrender.com)
+[![Status](https://img.shields.io/badge/Status-Online-brightgreen)](https://clinical-risk-ai-rkgg.onrender.com/api/health)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Trogguse/ClinicalRiskAI)
 [![GitHub license](https://img.shields.io/github/license/Trogguse/ClinicalRiskAI)](https://github.com/Trogguse/ClinicalRiskAI)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
 
 ---
 
-## 🌐 Live Deployment on Render
+## 🌐 Live Deployed Application
 
-Deploy this application live to Render with **1 Click**:
+🚀 **Live Web Dashboard**: **[https://clinical-risk-ai-rkgg.onrender.com](https://clinical-risk-ai-rkgg.onrender.com)**  
+🏥 **REST API Health Check**: **[https://clinical-risk-ai-rkgg.onrender.com/api/health](https://clinical-risk-ai-rkgg.onrender.com/api/health)**
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Trogguse/ClinicalRiskAI)
+The system is deployed on Render and serving predictions in real-time.
+
+---
 
 ### Manual Render Setup:
 1. Go to [dashboard.render.com](https://dashboard.render.com) and click **New +** > **Web Service**.
