@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClinicalRiskAI – Predictive Analytics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0f1e;
+      --surface:   #111827;
+      --card:      rgba(255,255,255,0.05);
+      --card-b:    rgba(255,255,255,0.10);
+      --primary:   #06b6d4;
+      --primary-d: #0891b2;
+      --accent:    #14b8a6;
+      --low:       #22c55e;
+      --med:       #f59e0b;
+      --high:      #ef4444;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --border:    rgba(255,255,255,0.08);
+      --radius:    14px;
+      --shadow:    0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+    /* ── Scrollbar ────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--primary-d); border-radius: 3px; }
+
+    /* ── Layout ───────────────────────────────────────────────────────── */
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header {
+      background: rgba(6,182,212,0.08);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo { display: flex; align-items: center; gap: .75rem; }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%,100% { box-shadow: 0 0 0 0 rgba(6,182,212,.6); }
+      50%      { box-shadow: 0 0 0 10px rgba(6,182,212,0); }
+    }
+    .logo h1 { font-size: 1.4rem; font-weight: 700; background: linear-gradient(90deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .logo span { font-size: .7rem; color: var(--muted); display: block; margin-top: -4px; }
+
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+
+    #status-badge {
+      display: flex; align-items: center; gap: .5rem;
+      font-size: .8rem; padding: .3rem .8rem; border-radius: 999px;
+      background: rgba(255,255,255,.06); border: 1px solid var(--border);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b7280; }
+    .status-dot.ok  { background: var(--low); animation: blink 2s infinite; }
+    .status-dot.err { background: var(--high); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Main body ────────────────────────────────────────────────────── */
+    .main { display: grid; grid-template-columns: 380px 1fr; gap: 1.5rem; padding: 1.5rem; align-items: start; }
+
+    /* ── Glassmorphism card ───────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card-header {
+      padding: 1rem 1.25rem .75rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .card-header h2 { font-size: .95rem; font-weight: 600; color: var(--text); }
+    .card-icon { font-size: 1.1rem; }
+    .card-body { padding: 1.25rem; }
+
+    /* ── Form ─────────────────────────────────────────────────────────── */
+    .form-section { margin-bottom: 1rem; }
+    .section-label {
+      font-size: .7rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--primary); margin-bottom: .5rem;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+    .form-grid.cols1 { grid-template-columns: 1fr; }
+
+    label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: .2rem; }
+    input[type=number], select {
+      width: 100%; background: rgba(255,255,255,.05);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: .85rem;
+      padding: .45rem .7rem; outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    input[type=number]:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(6,182,212,.15);
+    }
+    input[type=number]::-webkit-inner-spin-button { opacity: .4; }
+
+    .checkbox-row {
+      display: flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 8px; padding: .45rem .7rem; cursor: pointer;
+      transition: background .2s;
+    }
+    .checkbox-row:hover { background: rgba(255,255,255,.08); }
+    .checkbox-row input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+    .checkbox-row span { font-size: .82rem; color: var(--text); }
+
+    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+
+    .btn {
+      width: 100%; padding: .75rem; border: none; border-radius: 10px;
+      font-size: .95rem; font-weight: 600; cursor: pointer;
+      transition: transform .15s, box-shadow .15s, opacity .15s;
+      display: flex; align-items: center; justify-content: center; gap: .6rem;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(6,182,212,.35);
+    }
+    .btn-primary:hover { box-shadow: 0 4px 28px rgba(6,182,212,.55); }
+    .btn-secondary {
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--border);
+      color: var(--text);
+      margin-top: .6rem;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,.12); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Spinner */
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .7s linear infinite; display: none;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Right panel ─────────────────────────────────────────────────── */
+    .right-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── Gauge card ──────────────────────────────────────────────────── */
+    .gauge-card .card-body {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .gauge-wrap { position: relative; width: 200px; height: 200px; flex-shrink: 0; }
+    .gauge-wrap canvas { width: 100% !important; height: 100% !important; }
+    .gauge-center {
+      position: absolute; inset: 0; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+    }
+    .gauge-level { font-size: 1.8rem; font-weight: 800; letter-spacing: .03em; }
+    .gauge-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .confidence-pct { font-size: .9rem; color: var(--primary); font-weight: 600; margin-top: .15rem; }
+
+    /* Prob bars */
+    .prob-section h3 { font-size: .78rem; font-weight: 600; color: var(--muted); margin-bottom: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+    .prob-row { margin-bottom: .7rem; }
+    .prob-row-header { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: .25rem; }
+    .prob-bar-track { background: rgba(255,255,255,.07); border-radius: 999px; height: 8px; overflow: hidden; }
+    .prob-bar-fill { height: 100%; border-radius: 999px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+    .prob-bar-fill.low  { background: linear-gradient(90deg, var(--low), #86efac); }
+    .prob-bar-fill.med  { background: linear-gradient(90deg, var(--med), #fcd34d); }
+    .prob-bar-fill.high { background: linear-gradient(90deg, var(--high), #fca5a5); }
+
+    /* ── Recommendations ─────────────────────────────────────────────── */
+    #rec-list { display: flex; flex-direction: column; gap: .55rem; }
+    .rec-item {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .65rem 1rem;
+      font-size: .85rem;
+      line-height: 1.5;
+      animation: fade-up .4s ease both;
+    }
+    @keyframes fade-up { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Model info row ───────────────────────────────────────────────── */
+    .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .metric-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .75rem 1rem;
+    }
+    .metric-chip .label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .metric-chip .value { font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-top: .15rem; }
+    .metric-chip .sub   { font-size: .72rem; color: var(--muted); }
+
+    /* ── Alert banner ────────────────────────────────────────────────── */
+    #alert-banner {
+      display: none; padding: .85rem 1.25rem;
+      border-radius: var(--radius); margin-bottom: .5rem;
+      font-size: .88rem; font-weight: 500;
+      animation: fade-up .3s ease;
+    }
+    #alert-banner.warn  { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); color: #fbbf24; }
+    #alert-banner.info  { background: rgba(6,182,212,.10);  border: 1px solid rgba(6,182,212,.3);  color: var(--primary); }
+    #alert-banner.error { background: rgba(239,68,68,.10);  border: 1px solid rgba(239,68,68,.3);  color: #f87171; }
+
+    /* ── Patient summary ─────────────────────────────────────────────── */
+    .patient-summary {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: .6rem; margin-bottom: 1rem;
+    }
+    .ps-chip {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: .5rem .75rem; text-align: center;
+    }
+    .ps-chip .ps-val { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .ps-chip .ps-lbl { font-size: .65rem; color: var(--muted); margin-top: .1rem; }
+
+    /* ── Toast ────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: .85rem 1.25rem;
+      font-size: .85rem; max-width: 320px;
+      box-shadow: var(--shadow); opacity: 0;
+      transform: translateY(12px); transition: opacity .3s, transform .3s;
+      z-index: 9999; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Placeholder state ───────────────────────────────────────────── */
+    .placeholder {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 1rem; padding: 3rem 1rem;
+      color: var(--muted); text-align: center;
+    }
+    .placeholder-icon { font-size: 3.5rem; opacity: .3; }
+    .placeholder p { font-size: .9rem; max-width: 280px; }
+
+    /* ── Responsive ──────────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .main { grid-template-columns: 340px 1fr; }
+    }
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; }
+      .gauge-card .card-body { grid-template-columns: 1fr; justify-items: center; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🧬</div>
+      <div>
+        <h1>ClinicalRiskAI</h1>
+        <span>Predictive Risk Stratification System</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="status-badge">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Checking …</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main layout ────────────────────────────────────────────────────── -->
+  <div class="main">
+
+    <!-- ── Left sidebar – Patient Input ────────────────────────────────── -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-icon">👤</span>
+          <h2>Patient Data Entry</h2>
+        </div>
+        <div class="card-body">
+
+          <div id="alert-banner"></div>
+
+          <!-- Demographics -->
+          <div class="form-section">
+            <div class="section-label">Demographics</div>
+            <div class="form-grid">
+              <div>
+                <label>Age (years)</label>
+                <input type="number" id="age" value="55" min="20" max="90" step="1" />
+              </div>
+              <div>
+                <label>BMI</label>
+                <input type="number" id="bmi" value="28.5" min="10" max="60" step="0.1" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Vitals -->
+          <div class="form-section">
+            <div class="section-label">Vitals</div>
+            <div class="form-grid">
+              <div>
+                <label>Systolic BP (mmHg)</label>
+                <input type="number" id="systolic_bp" value="145" min="60" max="250" />
+              </div>
+              <div>
+                <label>Diastolic BP (mmHg)</label>
+                <input type="number" id="diastolic_bp" value="90" min="40" max="150" />
+              </div>
+              <div>
+                <label>Heart Rate (bpm)</label>
+                <input type="number" id="heart_rate" value="80" min="30" max="200" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Lab Values -->
+          <div class="form-section">
+            <div class="section-label">Laboratory Values</div>
+            <div class="form-grid">
+              <div>
+                <label>Cholesterol (mg/dL)</label>
+                <input type="number" id="cholesterol" value="220" min="100" max="400" />
+              </div>
+              <div>
+                <label>Glucose (mg/dL)</label>
+                <input type="number" id="glucose" value="130" min="40" max="600" />
+              </div>
+              <div>
+                <label>HbA1c (%)</label>
+                <input type="number" id="hba1c" value="7.2" min="3" max="15" step="0.1" />
+              </div>
+              <div>
+                <label>Creatinine (mg/dL)</label>
+                <input type="number" id="creatinine" value="1.2" min="0.2" max="15" step="0.1" />
+              </div>
+              <div>
+                <label>Sodium (mEq/L)</label>
+                <input type="number" id="sodium" value="140" min="120" max="160" />
+              </div>
+              <div>
+                <label>Potassium (mEq/L)</label>
+                <input type="number" id="potassium" value="4.1" min="2" max="8" step="0.1" />
+              </div>
+              <div>
+                <label>WBC (×10³/µL)</label>
+                <input type="number" id="wbc" value="7.5" min="1" max="30" step="0.1" />
+              </div>
+              <div>
+                <label>Hemoglobin (g/dL)</label>
+                <input type="number" id="hemoglobin" value="13.5" min="5" max="22" step="0.1" />
+              </div>
+              <div>
+                <label>Platelets (×10³/µL)</label>
+                <input type="number" id="platelets" value="250" min="50" max="800" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Medical History -->
+          <div class="form-section">
+            <div class="section-label">Medical History</div>
+            <div class="checkbox-grid">
+              <label class="checkbox-row">
+                <input type="checkbox" id="smoking_status" /> <span>🚬 Smoking</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="diabetes" checked /> <span>🩸 Diabetes</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="hypertension" checked /> <span>❤️ Hypertension</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="heart_disease" /> <span>🫀 Heart Disease</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Clinical Complexity -->
+          <div class="form-section">
+            <div class="section-label">Clinical Complexity</div>
+            <div class="form-grid">
+              <div>
+                <label>No. of Medications</label>
+                <input type="number" id="num_medications" value="5" min="0" max="20" />
+              </div>
+              <div>
+                <label>Hospitalisations</label>
+                <input type="number" id="num_hospitalizations" value="2" min="0" max="20" />
+              </div>
+              <div>
+                <label>Comorbidities</label>
+                <input type="number" id="num_comorbidities" value="3" min="0" max="15" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Model selector -->
+          <div class="form-section">
+            <div class="section-label">Model</div>
+            <select id="model_type">
+              <option value="gradient_boosting">🚀 Gradient Boosting</option>
+              <option value="random_forest">🌲 Random Forest</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary" id="predict-btn" onclick="analyzeRisk()">
+            <div class="spinner"></div>
+            <span class="btn-label">🔬 Analyze Risk</span>
+          </button>
+
+          <button class="btn btn-secondary" id="train-btn" onclick="trainModels()">
+            <div class="spinner"></div>
+            <span class="btn-label">⚙️ Train Models</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right panel ──────────────────────────────────────────────────── -->
+    <div class="right-panel">
+
+      <!-- Risk Gauge Card -->
+      <div class="card gauge-card" id="result-card">
+        <div class="card-header">
+          <span class="card-icon">📊</span>
+          <h2>Risk Assessment</h2>
+        </div>
+        <div class="card-body" id="result-body">
+          <div class="placeholder" style="grid-column:1/-1">
+            <div class="placeholder-icon">🔬</div>
+            <p>Enter patient data and click <strong>Analyze Risk</strong> to generate a prediction.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations Card -->
+      <div class="card" id="rec-card" style="display:none">
+        <div class="card-header">
+          <span class="card-icon">📋</span>
+          <h2>Clinical Recommendations</h2>
+        </div>
+        <div class="card-body">
+          <div id="rec-list"></div>
+        </div>
+      </div>
+
+      <!-- Model Performance Card -->
+      <div class="card" id="metrics-card" style="display:none">
+        <div class="card-header">
+          <span class="card-icon">📈</span>
+          <h2>Model Performance</h2>
+        </div>
+        <div class="card-body">
+          <div class="metrics-row" id="metrics-row"></div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /.main -->
+</div><!-- /.app-shell -->
+
+<div id="toast"></div>
+
+<script>
+/* ── Config ─────────────────────────────────────────────────────────────── */
+const API = '';   // same origin
+
+/* ── Chart instance ─────────────────────────────────────────────────────── */
+let gaugeChart = null;
+
+/* ── Utility ────────────────────────────────────────────────────────────── */
+function toast(msg, dur = 3500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function setBtn(id, loading) {
+  const btn = document.getElementById(id);
+  btn.classList.toggle('loading', loading);
+  btn.disabled = loading;
+}
+
+function showAlert(msg, type = 'warn') {
+  const el = document.getElementById('alert-banner');
+  el.textContent = msg;
+  el.className = type;
+  el.style.display = 'block';
+  setTimeout(() => (el.style.display = 'none'), 7000);
+}
+
+/* ── Health check ────────────────────────────────────────────────────────── */
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API}/api/health`);
+    const d = await r.json();
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    if (d.models_loaded) {
+      dot.className = 'status-dot ok';
+      text.textContent = 'Models Ready';
+      loadModelInfo();
+    } else {
+      dot.className = 'status-dot err';
+      text.textContent = 'Models Not Trained';
+      showAlert('⚠️ No trained models found. Click "Train Models" to get started.', 'warn');
+    }
+  } catch (e) {
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    dot.className = 'status-dot err';
+    text.textContent = 'Server Offline';
+  }
+}
+
+/* ── Collect form data ───────────────────────────────────────────────────── */
+function collectForm() {
+  const ids = [
+    'age','bmi','systolic_bp','diastolic_bp','heart_rate',
+    'cholesterol','glucose','hba1c','creatinine','sodium','potassium',
+    'wbc','hemoglobin','platelets','num_medications',
+    'num_hospitalizations','num_comorbidities'
+  ];
+  const cbs = ['smoking_status','diabetes','hypertension','heart_disease'];
+  const data = {};
+  ids.forEach(id => data[id] = parseFloat(document.getElementById(id).value));
+  cbs.forEach(id => data[id] = document.getElementById(id).checked ? 1 : 0);
+  return data;
+}
+
+/* ── Analyze Risk ────────────────────────────────────────────────────────── */
+async function analyzeRisk() {
+  setBtn('predict-btn', true);
+  try {
+    const patient = collectForm();
+    const model   = document.getElementById('model_type').value;
+    const res = await fetch(`${API}/api/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...patient, model_type: model }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.details ? data.details.join(' | ') : (data.error || 'Unknown error');
+      showAlert('❌ ' + msg, 'error');
+      return;
+    }
+    renderResult(data, patient);
+  } catch (e) {
+    showAlert('❌ Request failed: ' + e.message, 'error');
+  } finally {
+    setBtn('predict-btn', false);
+  }
+}
+
+/* ── Render result ───────────────────────────────────────────────────────── */
+function renderResult(data, patient) {
+  const { risk_label, risk_level, confidence, probabilities, recommendations } = data;
+
+  const colorMap = { Low: '#22c55e', Medium: '#f59e0b', High: '#ef4444' };
+  const color = colorMap[risk_label] || '#94a3b8';
+
+  /* Gauge */
+  const body = document.getElementById('result-body');
+  body.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;">
+      <div class="gauge-wrap">
+        <canvas id="gauge-canvas"></canvas>
+        <div class="gauge-center">
+          <div class="gauge-level" style="color:${color}">${risk_label}</div>
+          <div class="gauge-label">Risk Level</div>
+          <div class="confidence-pct">${confidence}% confidence</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="patient-summary">
+        <div class="ps-chip"><div class="ps-val">${patient.age|0}</div><div class="ps-lbl">Age</div></div>
+        <div class="ps-chip"><div class="ps-val">${patient.bmi.toFixed(1)}</div><div class="ps-lbl">BMI</div></div>
+        <div class="ps-chip"><div class="ps-val">${patient.systolic_bp|0}/${patient.diastolic_bp|0}</div><div class="ps-lbl">BP</div></div>
+        <div class="ps-chip"><div class="ps-val">${patient.hba1c.toFixed(1)}%</div><div class="ps-lbl">HbA1c</div></div>
+      </div>
+
+      <div class="prob-section">
+        <h3>Risk Probabilities</h3>
+        ${Object.entries(probabilities).map(([label, pct]) => `
+          <div class="prob-row">
+            <div class="prob-row-header">
+              <span>${label}</span>
+              <strong>${pct.toFixed(1)}%</strong>
+            </div>
+            <div class="prob-bar-track">
+              <div class="prob-bar-fill ${label.toLowerCase()}" style="width:${pct}%"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  /* Doughnut chart */
+  const ctx = document.getElementById('gauge-canvas').getContext('2d');
+  if (gaugeChart) gaugeChart.destroy();
+  const pcts = Object.values(probabilities);
+  const colors = Object.keys(probabilities).map(l => colorMap[l] || '#94a3b8');
+  gaugeChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(probabilities),
+      datasets: [{ data: pcts, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }],
+    },
+    options: {
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      animation: { animateRotate: true, duration: 900, easing: 'easeInOutQuart' },
+    },
+  });
+
+  /* Recommendations */
+  const recCard = document.getElementById('rec-card');
+  recCard.style.display = 'block';
+  document.getElementById('rec-list').innerHTML = recommendations.map((r, i) =>
+    `<div class="rec-item" style="animation-delay:${i * 0.07}s">${r}</div>`
+  ).join('');
+
+  toast(`✅ Risk assessed: ${risk_label} (${confidence}% confidence)`);
+}
+
+/* ── Train models ────────────────────────────────────────────────────────── */
+async function trainModels() {
+  setBtn('train-btn', true);
+  toast('⚙️ Training in progress… this may take a minute.', 60000);
+  try {
+    const res  = await fetch(`${API}/api/train`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      showAlert('❌ Training failed: ' + (data.error || 'Unknown'), 'error');
+      toast('❌ Training failed.');
+      return;
+    }
+    toast('🎉 Models trained successfully!');
+    showAlert('✅ Training complete! Models are now ready.', 'info');
+    checkHealth();
+    loadModelInfo();
+  } catch (e) {
+    showAlert('❌ Training error: ' + e.message, 'error');
+    toast('❌ Training request failed.');
+  } finally {
+    setBtn('train-btn', false);
+  }
+}
+
+/* ── Load model info / metrics ───────────────────────────────────────────── */
+async function loadModelInfo() {
+  try {
+    const res  = await fetch(`${API}/api/models/info`);
+    const data = await res.json();
+    if (!data.models_loaded) return;
+
+    const metricsCard = document.getElementById('metrics-card');
+    metricsCard.style.display = 'block';
+
+    // Attempt to get feature-importance for accuracy display
+    try {
+      const fiRes  = await fetch(`${API}/api/feature-importance`);
+      const fiData = await fiRes.json();
+      const row    = document.getElementById('metrics-row');
+      row.innerHTML = `
+        <div class="metric-chip">
+          <div class="label">Gradient Boosting</div>
+          <div class="value">Ready ✓</div>
+          <div class="sub">Top: ${Object.keys(fiData.gradient_boosting || {})[0] || '—'}</div>
+        </div>
+        <div class="metric-chip">
+          <div class="label">Random Forest</div>
+          <div class="value">Ready ✓</div>
+          <div class="sub">Top: ${Object.keys(fiData.random_forest || {})[0] || '—'}</div>
+        </div>
+        <div class="metric-chip">
+          <div class="label">Feature Count</div>
+          <div class="value">${data.feature_count || 21}</div>
+          <div class="sub">Clinical features</div>
+        </div>
+        <div class="metric-chip">
+          <div class="label">Models Available</div>
+          <div class="value">${(data.available_models || []).length}</div>
+          <div class="sub">${(data.available_models || []).join(', ') || '—'}</div>
+        </div>
+      `;
+    } catch (_) { /* ignore */ }
+  } catch (_) { /* ignore */ }
+}
+
+/* ── Init ────────────────────────────────────────────────────────────────── */
+window.addEventListener('load', checkHealth);
+</script>
+</body>
+</html>
