@@ -4,6 +4,29 @@
 
 A production-ready Flask application that uses ensemble machine learning (Gradient Boosting + Random Forest) to stratify patient risk into Low / Medium / High categories based on 21 clinical features.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Trogguse/ClinicalRiskAI)
+[![GitHub license](https://img.shields.io/github/license/Trogguse/ClinicalRiskAI)](https://github.com/Trogguse/ClinicalRiskAI)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+
+---
+
+## 🌐 Live Deployment on Render
+
+Deploy this application live to Render with **1 Click**:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Trogguse/ClinicalRiskAI)
+
+### Manual Render Setup:
+1. Go to [dashboard.render.com](https://dashboard.render.com) and click **New +** > **Web Service**.
+2. Connect your GitHub repository: `https://github.com/Trogguse/ClinicalRiskAI`.
+3. Configure the settings:
+   - **Name**: `clinical-risk-ai`
+   - **Runtime**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn run:app`
+4. Click **Deploy Web Service**.
+5. Once deployed, access the dashboard at: `https://clinical-risk-ai.onrender.com` (or your custom Render service name).
+
 ---
 
 ## 📋 Table of Contents
